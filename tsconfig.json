@@ -21,6 +21,6 @@
   },
   "typeRoots": ["./src/node_modules/@types", "./src/types", "./src/dataview_types"],
   "include": [
-    "./src/**/*.ts"
+	"./src/**/*.ts"
   ]
 }

@@ -28,14 +28,14 @@ export const DEFAULT_SETTINGS: RecentFilesPluginSettings = {
 dateformat(date(modified,"yyyy-MM-dd, hh:mm:ss"),"dd.MM.yyyy HH:mm") AS "Date",
 tags as "Tags"
 FROM "/" 
-WHERE modified != "" 
+WHERE modified != null 
 SORT date(modified,"yyyy-MM-dd, hh:mm:ss") DESC 
 LIMIT 25`,
 	recentlyCreatedQuery: `TABLE file.name as "Name",
 dateformat(date(created,"yyyy-MM-dd, hh:mm:ss"),"dd.MM.yyyy HH:mm") AS "Date",
 tags as "Tags"
 FROM "/" 
-WHERE created != "" 
+WHERE created != null
 SORT date(created,"yyyy-MM-dd, hh:mm:ss") DESC 
 LIMIT 25`,
 	metaKeyBehavior: MetaKeyBehavior.TAB,
@@ -46,6 +46,7 @@ export default class RecentFilesPlugin extends Plugin {
 	private dataviewPlugin: DataviewPlugin | undefined;
 
 	parseQueryResults(results: Result<QueryResult, string>): RecentFile[] {
+		console.log(results);
 		if(!(results && results.successful))
 		{
 			console.error("Query failed to execute successfully.");
@@ -76,6 +77,11 @@ export default class RecentFilesPlugin extends Plugin {
 		}
 
 	    return table.values.map((row: Array<any>): RecentFile => {
+	    	if(fields.Tags !== undefined) 	{
+		    	if(row[fields.Tags]==null){
+		    		row[fields.Tags] = [];
+		    	}
+		    }
 			return {
 				Path: fields.Path === undefined ? undefined : row[fields.Path].path,
 				Tags: fields.Tags === undefined ? undefined : row[fields.Tags].join(', '),
@@ -86,7 +92,11 @@ export default class RecentFilesPlugin extends Plugin {
 
 	checkDataviewEnabled() {
 		if (!this.dataviewPlugin) {
-			throw Error("Dataview plugin is not loaded.");
+			// make a new attempt to load Dataview
+			this.dataviewPlugin = (this.app.plugins.getPlugin('dataview')) as DataviewPlugin;
+			if (!this.dataviewPlugin) {
+				throw Error("Dataview plugin is not loaded.");
+			}
 		}
 
 		if (!this.app.plugins.isEnabled('dataview')) {
