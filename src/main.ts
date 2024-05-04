@@ -28,14 +28,14 @@ export const DEFAULT_SETTINGS: RecentFilesPluginSettings = {
 dateformat(date(modified,"yyyy-MM-dd, hh:mm:ss"),"dd.MM.yyyy HH:mm") AS "Date",
 tags as "Tags"
 FROM "/" 
-WHERE modified != null 
+WHERE modified
 SORT date(modified,"yyyy-MM-dd, hh:mm:ss") DESC 
 LIMIT 25`,
 	recentlyCreatedQuery: `TABLE file.name as "Name",
 dateformat(date(created,"yyyy-MM-dd, hh:mm:ss"),"dd.MM.yyyy HH:mm") AS "Date",
 tags as "Tags"
 FROM "/" 
-WHERE created != null
+WHERE created
 SORT date(created,"yyyy-MM-dd, hh:mm:ss") DESC 
 LIMIT 25`,
 	metaKeyBehavior: MetaKeyBehavior.TAB,
@@ -46,7 +46,6 @@ export default class RecentFilesPlugin extends Plugin {
 	private dataviewPlugin: DataviewPlugin | undefined;
 
 	parseQueryResults(results: Result<QueryResult, string>): RecentFile[] {
-		console.log(results);
 		if(!(results && results.successful))
 		{
 			console.error("Query failed to execute successfully.");
