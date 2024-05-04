@@ -1,6 +1,6 @@
-# Obsidian Sample Plugin
+# Obsidian Dataview Recent files
 
-
+![Screenshot](docs/images/Screenshot.png)
 
 
 # Export data types from Dataview

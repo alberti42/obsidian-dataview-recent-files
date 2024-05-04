@@ -1,6 +1,7 @@
 import esbuild from "esbuild";
 import process from "process";
 import builtins from "builtin-modules";
+import copy from 'esbuild-plugin-copy';
 
 const banner =
 	`/*
@@ -39,7 +40,15 @@ const context = await esbuild.context({
 	logLevel: "info",
 	sourcemap: prod ? false : "inline",
 	treeShaking: true,
-	outdir: "dist"
+	outdir: "dist",
+	plugins: [
+        copy({
+            assets: {
+                from: ['./manifest.json'],
+                to: ['./manifest.json']
+            }
+        })
+    ],
 	// outfile: "dist/main.js",
 });
 
