@@ -1,4 +1,5 @@
-import { App, FuzzyMatch, FuzzySuggestModal, Modal, TFile, Notice } from 'obsidian';
+/* eslint-disable @typescript-eslint/no-inferrable-types */
+import { App, FuzzyMatch, FuzzySuggestModal, TFile, Notice } from 'obsidian';
 
 import { RecentFile } from "types/RecentFiles";
 
@@ -67,16 +68,16 @@ export class RecentFileFuzzyModal extends FuzzySuggestModal < RecentFile > {
 		} else {
 			console.error("Error in creating a leaf for the file to be opened:", filePath);
 		}
-	};
+	}
 
 	onOpen() {
 		super.onOpen();
 		this.inputEl.focus();
-        this.containerEl.addEventListener('keydown', this.handleKeyDown);
+		this.containerEl.addEventListener('keydown', this.handleKeyDown);
 	}
 
 	onClose() {
-        this.containerEl.removeEventListener('keydown', this.handleKeyDown);
+		this.containerEl.removeEventListener('keydown', this.handleKeyDown);
 		super.onClose();
 		this.contentEl.empty();
 	}
@@ -84,9 +85,9 @@ export class RecentFileFuzzyModal extends FuzzySuggestModal < RecentFile > {
 	private handleKeyDown = (evt: KeyboardEvent) => {
 		// evt.isComposing determines whether the event is part of a key composition
 		if (evt.key === 'Enter' && !evt.isComposing && evt.metaKey) {
-        	this.chooser.useSelectedItem(evt);
-        }
-    }
+			this.chooser.useSelectedItem(evt);
+		}
+	}
 
 	getItemText(item: RecentFile): string {
 		return item.Name;

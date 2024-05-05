@@ -3,8 +3,8 @@
 export interface RecentFile {
 	Name: string;
 	Path: string;
-	Date: string;
-	Tags: string;
+	Date: string | undefined;
+	Tags: string | undefined;
 }
 
 // export type MetaKeyBehavior = MetaKeyBehaviorEnum;

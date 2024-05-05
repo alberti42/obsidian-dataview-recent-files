@@ -10,7 +10,7 @@ import { DataviewApi } from 'dataview_types';
 declare module 'obsidian' {
     // Update the PluginManager interface to use PluginManifest
     interface PluginManager {
-        plugins: { [id: string]: any };
+        plugins: { [id: string]: unknown };
         enabledPlugins: Set<string>;
         manifests: { [id: string]: PluginManifest };
         getPlugin(pluginId: string): Plugin | undefined;
@@ -44,7 +44,7 @@ declare module 'obsidian' {
         initialized: boolean;
         // links: IndexMap;
         metadataCache: MetadataCache; // Assuming MetadataCache is defined elsewhere
-        onChange: Function; // Define function signature if more details are known
+        // onChange: Function; // Define function signature if more details are known
         // pages: Map<string, PageMetadata>; // Specify the key type if different
         // persister: LocalStorageCache;
         // prefix: PrefixIndex;

@@ -1,11 +1,11 @@
-import { App, Editor, MarkdownFileInfo, MarkdownView, Modal, Notice, Plugin, PluginManager, PluginSettingTab, Setting, TextAreaComponent} from 'obsidian';
+import { App, Notice, Plugin, PluginSettingTab, Setting, TextAreaComponent} from 'obsidian';
 
 import { RecentFileFuzzyModal } from 'RecentFileFuzzyModal';
 
 import { RecentFile } from 'types/RecentFiles';
 
-import { Result, Success } from 'dataview_types';
-import { QueryResult, DataviewApi, TableResult } from 'dataview_types/api/plugin-api';
+import { Result, Link } from 'dataview_types';
+import { QueryResult, TableResult } from 'dataview_types/api/plugin-api';
 import DataviewPlugin from 'dataview_types/main';
 
 // import styles.css for being deployed with the plugin
@@ -49,7 +49,7 @@ export default class RecentFilesPlugin extends Plugin {
 		if(!(results && results.successful))
 		{
 			console.error("Query failed to execute successfully.");
-	        return [];
+			return [];
 		}
 
 		const type = results.value.type;
@@ -60,33 +60,35 @@ export default class RecentFilesPlugin extends Plugin {
 
 		const table = results.value as TableResult;
 
-		var fields: Record<string, number | undefined> = {
+		const fields: Record<string, number | undefined> = {
 			'Path': 0,
 			'Name': undefined,
 			'Tags': undefined,
 			'Date': undefined,
 		};
 
-		table.headers.forEach((label:string, index: number) => {
+		table.headers.forEach((label: string, index: number) => {
 			fields[label] = index;
 		});
 
 		if(fields.Name === undefined) {
 			console.error("Wrong Dataview query: you must return a column 'Name' with the file name.");
+			return [];
 		}
 
-	    return table.values.map((row: Array<any>): RecentFile => {
-	    	if(fields.Tags !== undefined) 	{
-		    	if(row[fields.Tags]==null){
-		    		row[fields.Tags] = [];
-		    	}
-		    }
+		return table.values.map((row: Array<unknown>): RecentFile | null => {
+			if(fields.Tags !== undefined) 	{
+				if(row[fields.Tags]==null){
+					row[fields.Tags] = [];
+				}
+			}
+			if(fields.Name === undefined || fields.Path === undefined) { return null; }
 			return {
-				Path: fields.Path === undefined ? undefined : row[fields.Path].path,
-				Tags: fields.Tags === undefined ? undefined : row[fields.Tags].join(', '),
-				Name: fields.Name === undefined ? undefined : row[fields.Name],
-				Date: fields.Date === undefined ? undefined : row[fields.Date],
-			}});
+				Name: row[fields.Name] as string,
+				Path: (row[fields.Path] as Link).path,
+				Date: fields.Date === undefined ? undefined : row[fields.Date] as string,
+				Tags: fields.Tags === undefined ? undefined : (row[fields.Tags] as Array<string>).join(', '),
+			}}).filter((item: RecentFile | null): item is RecentFile => item !== null);
 	}
 
 	checkDataviewEnabled() {
@@ -117,17 +119,17 @@ export default class RecentFilesPlugin extends Plugin {
 		}
 		
 		let dataviewAPI = (this.dataviewPlugin as DataviewPlugin).api;
-	    
-	    let results;
-	    try {
-	        results = await dataviewAPI.query(query);
+		
+		let results;
+		try {
+			results = await dataviewAPI.query(query);
 
-	    } catch (error) {
-	        console.error("Failed to execute query or show modal:", error);
-	    }
-	    const parsedFiles = this.parseQueryResults(results);
-        const modal = new RecentFileFuzzyModal(this.app, this, hint, parsedFiles);
-        modal.open();
+		} catch (error) {
+			console.error("Failed to execute query or show modal:", error);
+		}
+		const parsedFiles = this.parseQueryResults(results);
+		const modal = new RecentFileFuzzyModal(this.app, this, hint, parsedFiles);
+		modal.open();
 	}
 
 	async onload() {
@@ -214,33 +216,33 @@ class RecentFilesTab extends PluginSettingTab {
 			key = 'Ctrl';
 		}
 		new Setting(containerEl)
-            .setName(`Behavior of modifierrrr ${key} key:`)
-            .setDesc(`Choose how notes should be opened when the modifier ${key} key is pressed.`)
-            .addDropdown(dropdown => {
-                dropdown.addOption(MetaKeyBehavior.TAB, 'In a new tab');
-                dropdown.addOption(MetaKeyBehavior.SPLIT, 'In a split pane');
-                dropdown.addOption(MetaKeyBehavior.WINDOW, 'In a new window');
-                dropdown.setValue(this.plugin.settings.metaKeyBehavior)
-                .onChange(async (value: string) => {
-                	if (Object.values(MetaKeyBehavior).includes(value as MetaKeyBehavior)) {
-            		this.plugin.settings.metaKeyBehavior = value as MetaKeyBehavior;
-                    	await this.plugin.saveSettings();
+			.setName(`Behavior of modifierrrr ${key} key:`)
+			.setDesc(`Choose how notes should be opened when the modifier ${key} key is pressed.`)
+			.addDropdown(dropdown => {
+				dropdown.addOption(MetaKeyBehavior.TAB, 'In a new tab');
+				dropdown.addOption(MetaKeyBehavior.SPLIT, 'In a split pane');
+				dropdown.addOption(MetaKeyBehavior.WINDOW, 'In a new window');
+				dropdown.setValue(this.plugin.settings.metaKeyBehavior)
+				.onChange(async (value: string) => {
+					if (Object.values(MetaKeyBehavior).includes(value as MetaKeyBehavior)) {
+					this.plugin.settings.metaKeyBehavior = value as MetaKeyBehavior;
+						await this.plugin.saveSettings();
 					} else {
-                    	console.error('Invalid option selection:', value);
-                    }
-            })});
+						console.error('Invalid option selection:', value);
+					}
+			})});
 
 		const createQuery = ((label:string,queryInput:string,queryDefault:string,callback:((queryOutput:string)=>void)) => {
 		const modQuery = new Setting(containerEl)
 			.setName(`Dataview query for recently ${label} files:`)
 			.setDesc(createFragment((frag) => {
-            	frag.appendText('Supported fields returned from the Dataview query:');
-            	frag.createEl('ul')
-            	.createEl('li',{text: '"Name" → name of the original file displayed in the list (mandatory)'})
+				frag.appendText('Supported fields returned from the Dataview query:');
+				frag.createEl('ul')
+				.createEl('li',{text: '"Name" → name of the original file displayed in the list (mandatory)'})
 				.createEl('li',{text: '"Tags" → tags containing a list of tags (optional) '})
-            	.createEl('li',{text: '"Date" → date field (optional)'})
-            	.createEl('li',{text: '"Custom" → custom field (optional)'});
-            }))
+				.createEl('li',{text: '"Date" → date field (optional)'})
+				.createEl('li',{text: '"Custom" → custom field (optional)'});
+			}))
 			.addTextArea((textArea: TextAreaComponent) => {
 				textArea.setPlaceholder(queryDefault)
 					.setValue(queryInput)
