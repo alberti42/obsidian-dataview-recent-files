@@ -8,9 +8,6 @@ import { Result, Link } from 'dataview_types';
 import { QueryResult, TableResult } from 'dataview_types/api/plugin-api';
 import DataviewPlugin from 'dataview_types/main';
 
-// import styles.css for being deployed with the plugin
-import "../styles/styles.css";
-
 enum MetaKeyBehavior {
 	WINDOW = 'window',
 	SPLIT = 'split',
@@ -137,18 +134,6 @@ export default class RecentFilesPlugin extends Plugin {
 
 		this.dataviewPlugin = (this.app.plugins.getPlugin('dataview')) as DataviewPlugin;
 		
-		// This creates an icon in the left ribbon.
-		const ribbonIconEl = this.addRibbonIcon('dice', 'Sample Plugin', (evt: MouseEvent) => {
-			// Called when the user clicks the icon.
-			new Notice('This is a notice!');
-		});
-		// Perform additional things with the ribbon
-		ribbonIconEl.addClass('my-plugin-ribbon-class');
-
-		// This adds a status bar item to the bottom of the app. Does not work on mobile apps.
-		const statusBarItemEl = this.addStatusBarItem();
-		statusBarItemEl.setText('Status Bar Text');
-
 		this.addCommand({
 			id: 'show-recently-modified-files',
 			name: 'Show recently modified files',
