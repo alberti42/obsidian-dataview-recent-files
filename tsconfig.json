@@ -19,7 +19,7 @@
     ],
     //"jsx": "react-jsx", // Required by React
   },
-  "typeRoots": ["./src/node_modules/@types", "./src/types", "./src/dataview_types"],
+  "typeRoots": ["./src/types", "./src/dataview_types", "./src/node_modules/@types"],
   "include": [
 	"./src/**/*.ts"
   ]
