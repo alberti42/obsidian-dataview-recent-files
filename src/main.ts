@@ -1,10 +1,10 @@
-import { App, Notice, Plugin, PluginSettingTab, Setting, TextAreaComponent} from 'obsidian';
+import { App, Notice, Plugin, PluginSettingTab, Setting, TextAreaComponent, Platform} from 'obsidian';
 
 import { RecentFileFuzzyModal } from 'RecentFileFuzzyModal';
 
 import { RecentFile } from 'types/RecentFiles';
 
-import { Result, Link } from 'dataview_types';
+import { Result } from 'dataview_types';
 import { QueryResult, TableResult } from 'dataview_types/api/plugin-api';
 import DataviewPlugin from 'dataview_types/main';
 
@@ -18,17 +18,20 @@ interface RecentFilesPluginSettings {
 	recentlyModifiedQuery: string;
 	recentlyCreatedQuery: string;
 	metaKeyBehavior: MetaKeyBehavior;
+	widthRecentList: number | null;
 }
 
 export const DEFAULT_SETTINGS: RecentFilesPluginSettings = {
-	recentlyModifiedQuery: `TABLE file.name as "Name",
+	recentlyModifiedQuery: `TABLE WITHOUT ID file.path as "Path",
+file.name as "Name",
 dateformat(date(modified,"yyyy-MM-dd, hh:mm:ss"),"dd.MM.yyyy HH:mm") AS "Date",
 tags as "Tags"
 FROM "/" 
 WHERE modified AND !startswith(file.path, "00 Meta")
 SORT date(modified,"yyyy-MM-dd, hh:mm:ss") DESC 
 LIMIT 25`,
-	recentlyCreatedQuery: `TABLE file.name as "Name",
+	recentlyCreatedQuery: `TABLE WITHOUT ID file.path as "Path",
+file.name as "Name",
 dateformat(date(created,"yyyy-MM-dd, hh:mm:ss"),"dd.MM.yyyy HH:mm") AS "Date",
 tags as "Tags"
 FROM "/" 
@@ -36,6 +39,7 @@ WHERE created AND !startswith(file.path, "00 Meta")
 SORT date(created,"yyyy-MM-dd, hh:mm:ss") DESC 
 LIMIT 25`,
 	metaKeyBehavior: MetaKeyBehavior.TAB,
+	widthRecentList: null,
 }
 
 export default class RecentFilesPlugin extends Plugin {
@@ -58,14 +62,19 @@ export default class RecentFilesPlugin extends Plugin {
 		const table = results.value as TableResult;
 
 		const fields: Record<string, number | undefined> = {
-			'Path': 0,
+			'Path': undefined,
 			'Name': undefined,
 			'Tags': undefined,
 			'Date': undefined,
 		};
 
 		table.headers.forEach((label: string, index: number) => {
-			fields[label] = index;
+			if(label in fields){
+				fields[label] = index;	
+			} else {
+				console.error(`The field '${label}' chosen by the user in the Dataview query will be ignored.`);	
+			}
+			
 		});
 
 		if(fields.Name === undefined) {
@@ -81,10 +90,10 @@ export default class RecentFilesPlugin extends Plugin {
 			}
 			if(fields.Name === undefined || fields.Path === undefined) { return null; }
 			return {
-				Name: row[fields.Name] as string,
-				Path: (row[fields.Path] as Link).path,
+				Name: row[fields.Name] as string,  // mandatory field
+				Path: row[fields.Path] as string,   // mandatory field
 				Date: fields.Date === undefined ? undefined : row[fields.Date] as string,
-				Tags: fields.Tags === undefined ? undefined : (row[fields.Tags] as Array<string>).join(', '),
+				Tags: fields.Tags === undefined ? undefined : row[fields.Tags] as Array<string>,
 			}}).filter((item: RecentFile | null): item is RecentFile => item !== null);
 	}
 
@@ -115,7 +124,7 @@ export default class RecentFilesPlugin extends Plugin {
 			return;
 		}
 		
-		let dataviewAPI = (this.dataviewPlugin as DataviewPlugin).api;
+		const dataviewAPI = (this.dataviewPlugin as DataviewPlugin).api;
 		
 		let results;
 		try {
@@ -179,8 +188,6 @@ class RecentFilesTab extends PluginSettingTab {
 
 		containerEl.empty();
 
-		containerEl.createEl('h2', { text: 'Settings for Dataview Recent Files Plugin' });
-
 		try{
 			this.plugin.checkDataviewEnabled();
 		}
@@ -191,18 +198,21 @@ class RecentFilesTab extends PluginSettingTab {
 			else {
 				console.error("Dataview plugin not found:",e);
 			}
+			return
 		}
 
+		new Setting(containerEl).setName('Opening behavior').setHeading();
+
 		let key = 'META';
-		const os = navigator.platform.toUpperCase();
-		if (os.includes('MAC')) {
+
+		if (Platform.isMacOS) {
 			key = '⌘';
 		} else { // Default to Windows/Linux bindings
 			key = 'Ctrl';
 		}
 		new Setting(containerEl)
-			.setName(`Behavior of modifierrrr ${key} key:`)
-			.setDesc(`Choose how notes should be opened when the modifier ${key} key is pressed.`)
+			.setName(`Modifier key ${key}:`)
+			.setDesc(`Choose how notes should be opened when the modifier key ${key} is pressed.`)
 			.addDropdown(dropdown => {
 				dropdown.addOption(MetaKeyBehavior.TAB, 'In a new tab');
 				dropdown.addOption(MetaKeyBehavior.SPLIT, 'In a split pane');
@@ -217,35 +227,37 @@ class RecentFilesTab extends PluginSettingTab {
 					}
 			})});
 
-		const createQuery = ((label:string,queryInput:string,queryDefault:string,callback:((queryOutput:string)=>void)) => {
-		const modQuery = new Setting(containerEl)
-			.setName(`Dataview query for recently ${label} files:`)
-			.setDesc(createFragment((frag) => {
-				frag.appendText('Supported fields returned from the Dataview query:');
-				frag.createEl('ul')
-				.createEl('li',{text: '"Name" → name of the original file displayed in the list (mandatory)'})
-				.createEl('li',{text: '"Tags" → tags containing a list of tags (optional) '})
-				.createEl('li',{text: '"Date" → date field (optional)'})
-				.createEl('li',{text: '"Custom" → custom field (optional)'});
-			}))
-			.addTextArea((textArea: TextAreaComponent) => {
-				textArea.setPlaceholder(queryDefault)
-					.setValue(queryInput)
-					.onChange(async (value) => {
-						if(value == "") {
-							callback(queryDefault);
-						} else {
-							callback(value);	
-						}
-						await this.plugin.saveSettings();
-					});
+		new Setting(containerEl).setName('Dataview queries').setHeading();
 
-				// Set styles for full width
-				textArea.inputEl.style.width = '95%'; // Sets the width to 100% of the settings container
-				textArea.inputEl.style.boxSizing = 'border-box'; // Ensures padding does not affect the width
-				textArea.inputEl.style.minHeight = '300px';
-				textArea.inputEl.style.flex = '0 0 auto';
-			});
+		const createQuery = ((label:string,queryInput:string,queryDefault:string,callback:((queryOutput:string)=>void)) => {
+			const modQuery = new Setting(containerEl)
+				.setName(`Dataview query for recently ${label} files:`)
+				.setDesc(createFragment((frag) => {
+					frag.appendText('Supported fields returned from the Dataview query:');
+					frag.createEl('ul')
+					.createEl('li',{text: '"Name" → name of the original file displayed in the list (mandatory)'})
+					.createEl('li',{text: '"Tags" → tags containing a list of tags (optional) '})
+					.createEl('li',{text: '"Date" → date field (optional)'})
+					.createEl('li',{text: '"Custom" → custom field (optional)'});
+				}))
+				.addTextArea((textArea: TextAreaComponent) => {
+					textArea.setPlaceholder(queryDefault)
+						.setValue(queryInput)
+						.onChange(async (value) => {
+							if(value == "") {
+								callback(queryDefault);
+							} else {
+								callback(value);	
+							}
+							await this.plugin.saveSettings();
+						});
+
+					// Set styles for full width
+					textArea.inputEl.style.width = '95%'; // Sets the width to 100% of the settings container
+					textArea.inputEl.style.boxSizing = 'border-box'; // Ensures padding does not affect the width
+					textArea.inputEl.style.minHeight = '300px';
+					textArea.inputEl.style.flex = '0 0 auto';
+				});
 			modQuery.infoEl.style.width = '40%';
 			modQuery.infoEl.style.flex = '0 0 auto';
 			modQuery.settingEl.style.alignItems = 'start';
@@ -253,5 +265,37 @@ class RecentFilesTab extends PluginSettingTab {
 
 		createQuery('created',this.plugin.settings.recentlyCreatedQuery,DEFAULT_SETTINGS.recentlyCreatedQuery,(query:string)=>{this.plugin.settings.recentlyCreatedQuery = query;});
 		createQuery('modified',this.plugin.settings.recentlyModifiedQuery,DEFAULT_SETTINGS.recentlyModifiedQuery,(query:string)=>{this.plugin.settings.recentlyModifiedQuery = query;});
+
+		new Setting(containerEl).setName('Display').setHeading();
+
+		const widthEl = new Setting(containerEl)
+			.setName('Width of recent file list:')
+			.setDesc('Choose the width in pixels.')
+			.addText(text => {
+				text.setPlaceholder('If empty, the default width is assumed.');
+				text.setValue(this.plugin.settings.widthRecentList ? this.plugin.settings.widthRecentList.toString() : "");
+				text.onChange(async (value: string) => {
+					const isValidInteger = (value: string): boolean => {
+						return /^\s*\d+\s*$/.test(value);
+					};
+
+					if (isValidInteger(value)) {
+						this.plugin.settings.widthRecentList = parseInt(value, 10);
+					} else {
+						console.error('Invalid width: Please enter a valid integer.');
+						this.plugin.settings.widthRecentList = null;
+					}
+
+					await this.plugin.saveSettings();
+				});
+
+				// Set styles for full width
+				text.inputEl.style.width = '95%'; // Sets the width to 100% of the settings container
+				text.inputEl.style.boxSizing = 'border-box'; // Ensures padding does not affect the width
+				text.inputEl.style.flex = '0 0 auto';
+			});
+		widthEl.infoEl.style.width = '40%';
+		widthEl.infoEl.style.flex = '0 0 auto';
+		widthEl.settingEl.style.alignItems = 'start';
 	}
 }

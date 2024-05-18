@@ -1,8 +1,21 @@
-/*
+/* styles.css */
 
-This CSS file will be included with your plugin, and
-available in the app when your plugin is enabled.
+.dv-recent-files {
+    display: flex;
+    justify-content: space-between;
+    width: 100%;
+}
 
-If your plugin does not need CSS, delete this file.
+.dv-recent-name {
+    flex: 1;
+    margin-right: 10px; /* Adjust the margin as needed */
+}
 
-*/
+.dv-recent-tags {
+    flex: 0;
+    display: flex;
+    gap: var(--size-4-1); /* Space between tags */
+    align-items: center;
+    text-align: right; /* Align text to the right */
+}
+

@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-inferrable-types */
-import { App, FuzzyMatch, FuzzySuggestModal, TFile, Notice } from 'obsidian';
+import { App, FuzzyMatch, FuzzySuggestModal, TFile, Notice, Platform } from 'obsidian';
 
 import { RecentFile } from "types/RecentFiles";
 
@@ -14,15 +14,14 @@ enum MetaKeyBehavior {
 import { DEFAULT_SETTINGS } from 'main';
 
 export class RecentFileFuzzyModal extends FuzzySuggestModal < RecentFile > {
-	constructor(app: App, private plugin: RecentFilesPlugin, private hint: string, private files: Array < RecentFile > ) {
+	constructor(app: App, private plugin: RecentFilesPlugin, private hint: string, private files: Array<RecentFile> ) {
 		super(app);
 		this.setPlaceholder(`Search recently ${hint} files...`);
 		this.setInstructions(this.getInstructionsBasedOnOS());
 	}
 
 	getInstructionsBasedOnOS(): { command: string, purpose: string } [] {
-		const os = navigator.platform.toUpperCase();
-		if (os.includes('MAC')) {
+		if (Platform.isMacOS) {
 			return [
 				{ command: '↑↓', purpose: 'to navigate' },
 				{ command: "↵", purpose: "to open the selected file" },
@@ -74,7 +73,15 @@ export class RecentFileFuzzyModal extends FuzzySuggestModal < RecentFile > {
 		super.onOpen();
 		this.inputEl.focus();
 		this.containerEl.addEventListener('keydown', this.handleKeyDown);
+		this.applyWidthSetting();
 	}
+
+	applyWidthSetting() {
+        const recentFilesPrompt = document.querySelector('.prompt') as HTMLElement;
+        if (recentFilesPrompt && this.plugin.settings.widthRecentList) {
+            recentFilesPrompt.style.width = `${this.plugin.settings.widthRecentList}px`;
+        }
+    }
 
 	onClose() {
 		this.containerEl.removeEventListener('keydown', this.handleKeyDown);
@@ -94,11 +101,48 @@ export class RecentFileFuzzyModal extends FuzzySuggestModal < RecentFile > {
 	}
 
 	renderSuggestion(item: FuzzyMatch < RecentFile > , el: HTMLElement) {
-		super.renderSuggestion(item, el);
-		// el.innerHTML = `Open ` + el.innerHTML;
+		el.empty(); // Clear the existing content
+
+		const suggestionContainer = document.createElement('div');
+		suggestionContainer.classList.add('dv-recent-files');
+
+		const nameEl = document.createElement('div');
+		nameEl.textContent = item.item.Name;
+		nameEl.classList.add('dv-recent-name');
+
+		const tagsEl = document.createElement('div');
+		tagsEl.classList.add('dv-recent-tags');
+
+		if (item.item.Tags) {
+			const tagsArray = item.item.Tags;
+			tagsArray.forEach(tag => {
+				if (tag.startsWith('#')) {
+					tag = tag.slice(1); // Remove the first '#' character if it exists
+				}
+
+				const tagContainer = document.createElement('div');
+				
+				const hashtagEl = document.createElement('span');
+				hashtagEl.classList.add('cm-formatting', 'cm-formatting-hashtag', 'cm-hashtag', 'cm-hashtag-begin', 'cm-meta', 'cm-tag-Computer');
+				hashtagEl.textContent = '#';
+
+				const tagEl = document.createElement('span');
+				tagEl.textContent = tag;
+				tagEl.classList.add('cm-hashtag', 'cm-meta', 'cm-hashtag-end');
+
+				tagContainer.appendChild(hashtagEl);
+				tagContainer.appendChild(tagEl);
+				tagsEl.appendChild(tagContainer);
+			});
+		}
+
+		suggestionContainer.appendChild(nameEl);
+		suggestionContainer.appendChild(tagsEl);
+
+		el.appendChild(suggestionContainer);
 	}
 
-	getItems(): Array < RecentFile > {
+	getItems(): Array<RecentFile> {
 		return this.files;
 	}
 
