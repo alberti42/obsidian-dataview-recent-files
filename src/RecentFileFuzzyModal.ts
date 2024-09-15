@@ -73,7 +73,7 @@ export class RecentFileFuzzyModal extends FuzzySuggestModal < RecentFile > {
 		super.onOpen();
 		this.inputEl.focus();
 		this.containerEl.addEventListener('keydown', this.handleKeyDown);
-		this.applyWidthSetting();
+		this.modalEl.classList.add('dv-recent-files');
 	}
 
 	applyWidthSetting() {
@@ -104,7 +104,7 @@ export class RecentFileFuzzyModal extends FuzzySuggestModal < RecentFile > {
 		el.empty(); // Clear the existing content
 
 		const suggestionContainer = document.createElement('div');
-		suggestionContainer.classList.add('dv-recent-files');
+		suggestionContainer.classList.add('dv-recent-files-suggest');
 
 		const nameEl = document.createElement('div');
 		nameEl.textContent = item.item.Name;

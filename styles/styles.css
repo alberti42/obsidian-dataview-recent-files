@@ -1,21 +1,28 @@
 /* styles.css */
 
 .dv-recent-files {
+	width: 60%;
+}
+
+.dv-recent-files-suggest {
     display: flex;
     justify-content: space-between;
     width: 100%;
+    row-gap: 10px;
 }
 
 .dv-recent-name {
-    flex: 1;
-    margin-right: 10px; /* Adjust the margin as needed */
+    flex: 3;
 }
 
 .dv-recent-tags {
-    flex: 0;
+    flex: 1;
     display: flex;
     gap: var(--size-4-1); /* Space between tags */
     align-items: center;
-    text-align: right; /* Align text to the right */
+    justify-content: flex-end; /* Align tags to the right */
+	white-space: nowrap;
+	text-overflow: ellipsis;
+	overflow: hidden;
 }
 
