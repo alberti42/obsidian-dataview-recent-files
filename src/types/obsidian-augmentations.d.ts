@@ -34,6 +34,10 @@ declare module 'obsidian' {
         setEnable(pluginId: string, enable: boolean): void;
     }
 
+    interface Setting {
+        activeTab: SettingTab;
+    }
+
     // Define the FullIndex interface
     interface FullIndex {
         app: App;
@@ -75,6 +79,7 @@ declare module 'obsidian' {
 
     interface App {
         appId?: string;
+        setting: Setting;
         plugins: {
             isEnabled(str: string): unknown;
             getPlugin(str: string): DataviewPlugin;

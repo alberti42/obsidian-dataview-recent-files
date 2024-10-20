@@ -138,6 +138,14 @@ export default class RecentFilesPlugin extends Plugin {
 		modal.open();
 	}
 
+    async onExternalSettingsChange() {
+        // Load settings
+        await this.loadSettings();
+
+        const activeTab = this.app.setting.activeTab;
+        if(activeTab && activeTab instanceof PluginSettingTab) activeTab.display();
+    }
+
 	async onload() {
 		this.loadSettings();
 
