@@ -1,4 +1,4 @@
-# Obsidian Dataview Recent files
+# Obsidian Dataview Recent Files
 
 ![Screenshot](docs/images/Screenshot.png)
 
